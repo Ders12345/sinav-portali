@@ -6,6 +6,7 @@
     <title>Çalışma & Takip Portalı - Groq AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     
     <style>
         :root {
@@ -197,7 +198,7 @@
         </div>
 
         <div id="notlarTab" class="tab-content">
-            <div class="header"><h1>Ders Notları & PDF Belge Alanı</h1></div>
+            <div class="header"><h1>Ders Notları & PDF Belge Alanı (Sınırsız Hafıza)</h1></div>
             <div class="card">
                 <div class="form-group" style="flex-direction: column;">
                     <input type="text" id="noteTitle" placeholder="Not Başlığı">
@@ -331,6 +332,12 @@
     </div>
 
     <script>
+        // IndexedDB Veritabanını Tanımlama (Sınırsız PDF Depolama)
+        const db = new Dexie("StudyPortalDB");
+        db.version(1).stores({
+            notes: '++id, title, content, file, date'
+        });
+
         const pdfDefaultProgram = {
             'Pazartesi': [
                 { id: 'p1', time: '16:30', text: 'SPOR: Calisthenics Antrenmanı (60 dk)', completed: false },
@@ -391,11 +398,10 @@
         let currentDay = 'Pazartesi';
         let tempFileData = null;
 
-        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v4')) || {
+        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v5')) || {
             coins: 0,
             completedDays: {},
             tasks: JSON.parse(JSON.stringify(pdfDefaultProgram)),
-            notes: [],
             logs: [],
             flashcards: [
                 { id: 1, front: "Bonjour", back: "Merhaba" },
@@ -411,7 +417,7 @@
         };
 
         function saveData() {
-            localStorage.setItem('myStudyData_groq_v4', JSON.stringify(appData));
+            localStorage.setItem('myStudyData_groq_v5', JSON.stringify(appData));
             updateUI();
         }
 
@@ -581,7 +587,7 @@
             document.getElementById('statEtkinlik').innerText = totalEtkinlik;
         }
 
-        /* NOTLAR & PDF */
+        /* NOTLAR & PDF (INDEXEDDB YÖNTEMİ) */
         function handleFile(input) {
             const file = input.files[0];
             if(!file) return;
@@ -591,26 +597,39 @@
             reader.readAsDataURL(file);
         }
 
-        function addNote() {
+        async function addNote() {
             const title = document.getElementById('noteTitle').value.trim();
             const content = document.getElementById('noteContent').value.trim();
-            if(!title && !content) return;
+            if(!title && !content) {
+                alert("Lütfen bir başlık veya içerik girin.");
+                return;
+            }
 
-            appData.notes.unshift({ id: Date.now(), title, content, file: tempFileData });
-            document.getElementById('noteTitle').value = '';
-            document.getElementById('noteContent').value = '';
-            document.getElementById('noteFile').value = '';
-            document.getElementById('fileNameDisplay').innerText = 'Dosya / PDF Seç';
-            tempFileData = null;
-            saveData();
+            try {
+                await db.notes.add({
+                    title: title,
+                    content: content,
+                    file: tempFileData,
+                    date: new Date().toLocaleDateString('tr-TR')
+                });
+
+                document.getElementById('noteTitle').value = '';
+                document.getElementById('noteContent').value = '';
+                document.getElementById('noteFile').value = '';
+                document.getElementById('fileNameDisplay').innerText = 'Dosya / PDF Seç';
+                tempFileData = null;
+                renderNotes();
+            } catch (e) {
+                alert("Not kaydedilirken bir hata oluştu: " + e.message);
+            }
         }
 
-        function deleteNote(id) {
-            appData.notes = appData.notes.filter(n => n.id !== id);
-            saveData();
+        async function deleteNote(id) {
+            await db.notes.delete(id);
+            renderNotes();
         }
 
-        function renderNotes() {
+        async function renderNotes() {
             const grid = document.getElementById('notesGrid');
             const sourceSelect = document.getElementById('quizSourceNote');
             const cardSourceSelect = document.getElementById('cardSourceNote');
@@ -619,7 +638,9 @@
             sourceSelect.innerHTML = '<option value="">-- Kaynak Not Seç (Tüm Notlar) --</option>';
             cardSourceSelect.innerHTML = '<option value="">-- Kaynak Not Seç (Tüm Notlar) --</option>';
 
-            appData.notes.forEach(note => {
+            const notes = await db.notes.toArray();
+
+            notes.forEach(note => {
                 const card = document.createElement('div');
                 card.className = 'card';
                 let fileBtn = note.file ? `<a href="${note.file.data}" download="${note.file.name}" style="color:var(--primary); font-size:0.85rem; text-decoration:none; display:block; margin-top:8px;"><i class="fa-solid fa-file-pdf"></i> ${note.file.name}</a>` : '';
@@ -655,12 +676,14 @@
             const lang = document.getElementById('quizLang').value;
             const count = document.getElementById('quizCount').value || 5;
 
+            const allNotes = await db.notes.toArray();
             let sourceText = "";
+
             if(noteId) {
-                const selectedNote = appData.notes.find(n => n.id == noteId);
+                const selectedNote = allNotes.find(n => n.id == noteId);
                 if(selectedNote) sourceText = `Başlık: ${selectedNote.title}\nİçerik: ${selectedNote.content}`;
             } else {
-                sourceText = appData.notes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
+                sourceText = allNotes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
             }
 
             if(!sourceText) {
@@ -724,7 +747,6 @@ ${sourceText}`;
                     const btn = document.createElement('button');
                     btn.className = `quiz-option opt_${qIndex}`;
                     
-                    // Şık metni boş veya sadece harften ibaretse düzelt
                     let displayText = String(opt).trim();
                     if(displayText.length <= 2 && ["a","b","c","d"].includes(displayText.toLowerCase())) {
                         displayText = `Seçenek ${displayText.toUpperCase()}`;
@@ -783,12 +805,14 @@ ${sourceText}`;
             const noteId = document.getElementById('cardSourceNote').value;
             const count = document.getElementById('cardAICount').value || 5;
 
+            const allNotes = await db.notes.toArray();
             let sourceText = "";
+
             if(noteId) {
-                const selectedNote = appData.notes.find(n => n.id == noteId);
+                const selectedNote = allNotes.find(n => n.id == noteId);
                 if(selectedNote) sourceText = `Başlık: ${selectedNote.title}\nİçerik: ${selectedNote.content}`;
             } else {
-                sourceText = appData.notes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
+                sourceText = allNotes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
             }
 
             if(!sourceText) {
@@ -924,7 +948,8 @@ ${sourceText}`;
             aiMsg.className = 'chat-msg ai';
             chatBox.appendChild(aiMsg);
 
-            let notesText = appData.notes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
+            const allNotes = await db.notes.toArray();
+            let notesText = allNotes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
 
             try {
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
