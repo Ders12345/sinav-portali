@@ -6,6 +6,7 @@
     <title>Çalışma & Takip Portalı - Groq AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Dexie.js Sınırsız Depolama Kütüphanesi -->
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     
     <style>
@@ -136,6 +137,7 @@
             <div class="stat-card"><span>Tamamlanan Etkinlik</span><h2 id="statEtkinlik">0</h2></div>
         </div>
 
+        <!-- PROGRAM TAB -->
         <div id="programTab" class="tab-content active">
             <div class="header">
                 <h1>Sınav Odaklı Haftalık Çalışma Programı</h1>
@@ -180,6 +182,7 @@
             </div>
         </div>
 
+        <!-- TAKİP TAB -->
         <div id="takipTab" class="tab-content">
             <div class="header"><h1>Günlük Çalışma Takibi</h1></div>
             <div class="card">
@@ -197,6 +200,7 @@
             <div class="log-list" id="logList"></div>
         </div>
 
+        <!-- NOTLAR TAB (Dexie.js / IndexedDB Entegrasyonu) -->
         <div id="notlarTab" class="tab-content">
             <div class="header"><h1>Ders Notları & PDF Belge Alanı (Sınırsız Hafıza)</h1></div>
             <div class="card">
@@ -215,6 +219,7 @@
             <div id="notesGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:16px;"></div>
         </div>
 
+        <!-- AI TEST OLUŞTURUCU TAB -->
         <div id="aiTestTab" class="tab-content">
             <div class="header">
                 <h1>AI Otomatik Test Oluşturucu</h1>
@@ -240,6 +245,7 @@
             </div>
         </div>
 
+        <!-- FLASHCARD (KELİME KARTLARI) TAB -->
         <div id="flashcardTab" class="tab-content">
             <div class="header">
                 <h1>Arkalı Önlü Bilgi & Lexique Kartları</h1>
@@ -288,6 +294,7 @@
             </div>
         </div>
 
+        <!-- AI ASİSTAN TAB (GROQ API) -->
         <div id="aiTab" class="tab-content">
             <div class="header">
                 <h1>Groq AI Asistanı</h1>
@@ -317,6 +324,7 @@
             </div>
         </div>
 
+        <!-- MAĞAZA TAB -->
         <div id="magazaTab" class="tab-content">
             <div class="header"><h1>Jeton Ödül Mağazası</h1></div>
             <div class="card">
@@ -332,8 +340,8 @@
     </div>
 
     <script>
-        // IndexedDB Veritabanını Tanımlama (Sınırsız PDF Depolama)
-        const db = new Dexie("StudyPortalDB");
+        // IndexedDB Veritabanını Tanımlama
+        const db = new Dexie("StudyPortalDB_v2");
         db.version(1).stores({
             notes: '++id, title, content, file, date'
         });
@@ -587,14 +595,18 @@
             document.getElementById('statEtkinlik').innerText = totalEtkinlik;
         }
 
-        /* NOTLAR & PDF (INDEXEDDB YÖNTEMİ) */
+        /* NOTLAR & PDF (SAFARI/IPAD UYUMLU INDEXEDDB) */
         function handleFile(input) {
             const file = input.files[0];
             if(!file) return;
             document.getElementById('fileNameDisplay').innerText = file.name;
-            const reader = new FileReader();
-            reader.onload = e => tempFileData = { name: file.name, data: e.target.result };
-            reader.readAsDataURL(file);
+            
+            // iPad Safari hatasını önlemek için dosyayı ham Blob olarak tutuyoruz
+            tempFileData = {
+                name: file.name,
+                type: file.type,
+                blob: file
+            };
         }
 
         async function addNote() {
@@ -609,7 +621,11 @@
                 await db.notes.add({
                     title: title,
                     content: content,
-                    file: tempFileData,
+                    file: tempFileData ? {
+                        name: tempFileData.name,
+                        type: tempFileData.type,
+                        blob: tempFileData.blob
+                    } : null,
                     date: new Date().toLocaleDateString('tr-TR')
                 });
 
@@ -643,7 +659,13 @@
             notes.forEach(note => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                let fileBtn = note.file ? `<a href="${note.file.data}" download="${note.file.name}" style="color:var(--primary); font-size:0.85rem; text-decoration:none; display:block; margin-top:8px;"><i class="fa-solid fa-file-pdf"></i> ${note.file.name}</a>` : '';
+                
+                let fileBtn = '';
+                if (note.file && note.file.blob) {
+                    const blobUrl = URL.createObjectURL(note.file.blob);
+                    fileBtn = `<a href="${blobUrl}" download="${note.file.name}" target="_blank" style="color:var(--primary); font-size:0.85rem; text-decoration:none; display:block; margin-top:8px;"><i class="fa-solid fa-file-pdf"></i> ${note.file.name}</a>`;
+                }
+
                 card.innerHTML = `
                     <h3>${note.title}</h3>
                     <p style="color:var(--text-muted); font-size:0.9rem; margin-top:6px; white-space:pre-wrap;">${note.content}</p>
