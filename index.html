@@ -63,6 +63,7 @@
         .btn-warning { background: var(--warning); color: white; }
         .btn-warning:hover { background: #d97706; }
         .btn-danger { background: var(--danger); color: white; }
+        .btn-success { background: var(--success); color: white; }
 
         .days-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .day-folder { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 14px; cursor: pointer; text-align: center; transition: all 0.2s; }
@@ -89,38 +90,25 @@
 
         .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; padding: 4px; }
 
-        .chat-box {
-            display: flex;
-            flex-direction: column;
-            height: 400px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            padding: 16px;
-            background: #fafafa;
-            overflow-y: auto;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        .chat-msg {
-            max-width: 80%;
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            line-height: 1.4;
-        }
-        .chat-msg.user {
-            align-self: flex-end;
-            background: var(--primary);
-            color: white;
-            border-bottom-right-radius: 2px;
-        }
-        .chat-msg.ai {
-            align-self: flex-start;
-            background: #e2e8f0;
-            color: var(--text-main);
-            border-bottom-left-radius: 2px;
-            white-space: pre-wrap;
-        }
+        .chat-box { display: flex; flex-direction: column; height: 400px; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 16px; background: #fafafa; overflow-y: auto; gap: 12px; margin-bottom: 16px; }
+        .chat-msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; }
+        .chat-msg.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 2px; }
+        .chat-msg.ai { align-self: flex-start; background: #e2e8f0; color: var(--text-main); border-bottom-left-radius: 2px; white-space: pre-wrap; }
+
+        /* FLASHCARD & TEST STYLES */
+        .flashcard-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; }
+        .flashcard-container { width: 320px; height: 200px; perspective: 1000px; cursor: pointer; user-select: none; }
+        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s ease, left 0.3s ease; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .flashcard.flipped { transform: rotateY(180deg); }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 16px; padding: 20px; text-align: center; }
+        .card-front { background: var(--card-bg); border: 2px solid var(--primary); color: var(--text-main); }
+        .card-back { background: var(--primary); color: white; transform: rotateY(180deg); }
+        .card-controls { display: flex; gap: 20px; margin-top: 20px; }
+        
+        .quiz-option { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s; }
+        .quiz-option:hover { background: #eef2ff; border-color: var(--primary); }
+        .quiz-option.correct { background: #dcfce7 !important; border-color: var(--success) !important; color: #166534; }
+        .quiz-option.wrong { background: #fee2e2 !important; border-color: var(--danger) !important; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -131,6 +119,10 @@
         <button class="nav-btn active" onclick="switchTab('programTab', this)"><i class="fa-regular fa-calendar-days"></i> Sınav Programı</button>
         <button class="nav-btn" onclick="switchTab('takipTab', this)"><i class="fa-solid fa-chart-line"></i> Çalışma Takibi</button>
         <button class="nav-btn" onclick="switchTab('notlarTab', this)"><i class="fa-regular fa-folder-open"></i> Notlar & PDF</button>
+
+        <button class="nav-btn" onclick="switchTab('aiTestTab', this)"><i class="fa-solid fa-file-pen"></i> AI Test Oluşturucu</button>
+        <button class="nav-btn" onclick="switchTab('flashcardTab', this)"><i class="fa-solid fa-clone"></i> Kelime & Kartlar</button>
+
         <button class="nav-btn" onclick="switchTab('aiTab', this)"><i class="fa-solid fa-bolt"></i> Groq AI Asistanı</button>
         <button class="nav-btn" onclick="switchTab('magazaTab', this)"><i class="fa-solid fa-store"></i> Ödül Mağazası</button>
     </div>
@@ -223,6 +215,69 @@
                 </div>
             </div>
             <div id="notesGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:16px;"></div>
+        </div>
+
+        <!-- AI TEST OLUŞTURUCU TAB -->
+        <div id="aiTestTab" class="tab-content">
+            <div class="header">
+                <h1>AI Otomatik Test Oluşturucu</h1>
+                <p>Eklediğin ders notlarından veya konulardan yapay zeka ile kişiselleştirilmiş sınav hazırla.</p>
+            </div>
+            <div class="card">
+                <div class="form-group">
+                    <select id="quizSourceNote" style="flex: 1.5;">
+                        <option value="">-- Kaynak Not Seç (Tüm Notlar İçin Boş Bırak) --</option>
+                    </select>
+                    <select id="quizLang" style="flex: 1;">
+                        <option value="Fransızca">Fransızca (Français)</option>
+                        <option value="Türkçe">Türkçe</option>
+                    </select>
+                    <input type="number" id="quizCount" placeholder="Soru Sayısı (Örn: 5)" value="5" min="1" max="10" style="flex: 0.8;">
+                    <button class="btn" onclick="generateAITest()"><i class="fa-solid fa-wand-magic-sparkles"></i> Test Üret</button>
+                </div>
+            </div>
+            <div id="quizContainer" class="card" style="display:none;">
+                <div id="quizQuestions"></div>
+                <button class="btn btn-success" style="margin-top:16px;" onclick="checkQuizResults()"><i class="fa-solid fa-check-double"></i> Testi Tamamla ve Kontrol Et</button>
+                <div id="quizResultScore" style="margin-top:16px; font-size:1.2rem; font-weight:700;"></div>
+            </div>
+        </div>
+
+        <!-- FLASHCARD (KELİME KARTLARI) TAB -->
+        <div id="flashcardTab" class="tab-content">
+            <div class="header">
+                <h1>Arkalı Önlü Bilgi & Lexique Kartları</h1>
+                <p>Kartların üzerine tıklayarak çevir. Bildiklerini sağa/yeşile, bilemediklerini sola/kırmızıya sürükle!</p>
+            </div>
+            <div class="card">
+                <h3>Yeni Kart Ekle</h3>
+                <div class="form-group" style="margin-top:10px;">
+                    <input type="text" id="cardFront" placeholder="Ön Yüz (Örn: Le livre)" style="flex:1;">
+                    <input type="text" id="cardBack" placeholder="Arka Yüz (Örn: Kitap)" style="flex:1;">
+                    <button class="btn" onclick="addFlashcard()"><i class="fa-solid fa-plus"></i> Kart Ekle</button>
+                </div>
+            </div>
+
+            <div class="flashcard-wrapper">
+                <div id="cardProgressText" style="font-weight:600; color:var(--text-muted); margin-bottom:10px;">Kalan Kart: 0</div>
+                
+                <div class="flashcard-container" onclick="flipCard()">
+                    <div class="flashcard" id="currentFlashcard">
+                        <div class="card-front">
+                            <h2 id="cardFrontText">Kart Bulunmuyor</h2>
+                            <span style="font-size:0.8rem; color:var(--text-muted); margin-top:10px;">(Çevirmek için dokun)</span>
+                        </div>
+                        <div class="card-back">
+                            <h2 id="cardBackText">Henüz Kart Eklemediniz</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-controls">
+                    <button class="btn btn-danger" style="padding:12px 24px;" onclick="swipeCard(false)"><i class="fa-solid fa-xmark"></i> Bilemedim (Sola)</button>
+                    <button class="btn btn-success" style="padding:12px 24px;" onclick="swipeCard(true)"><i class="fa-solid fa-check"></i> Bildim (Sağa)</button>
+                </div>
+            </div>
         </div>
 
         <!-- AI ASİSTAN TAB (GROQ API) -->
@@ -331,23 +386,27 @@
         let currentDay = 'Pazartesi';
         let tempFileData = null;
 
-        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v1')) || {
+        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v2')) || {
             coins: 0,
             completedDays: {},
             tasks: JSON.parse(JSON.stringify(pdfDefaultProgram)),
             notes: [],
             logs: [],
+            flashcards: [
+                { id: 1, front: "Bonjour", back: "Merhaba" },
+                { id: 2, front: "L'école", back: "Okul" },
+                { id: 3, front: "Etudier", back: "Ders Çalışmak" }
+            ],
             apiKey: '',
             selectedModel: 'qwen/qwen3.8-27b',
             rewards: [
                 { id: 1, title: "30 Dakika Oyun Mola Keyfi", cost: 100 },
-                { id: 2, title: "Sevdiğin Atıştırmalık / Tatlı", cost: 150 },
-                { id: 3, title: "Film / Dizi İzleme Keyfi", cost: 200 }
+                { id: 2, title: "Sevdiğin Atıştırmalık / Tatlı", cost: 150 }
             ]
         };
 
         function saveData() {
-            localStorage.setItem('myStudyData_groq_v1', JSON.stringify(appData));
+            localStorage.setItem('myStudyData_groq_v2', JSON.stringify(appData));
             updateUI();
         }
 
@@ -377,23 +436,17 @@
         function shiftSchedule() {
             const shiftInput = document.getElementById('shiftMinutes').value;
             const minutesToShift = parseInt(shiftInput);
-            
-            if (isNaN(minutesToShift) || minutesToShift === 0) {
-                alert("Lütfen geçerli bir sapma dakikası girin.");
-                return;
-            }
+            if (isNaN(minutesToShift) || minutesToShift === 0) return;
 
             const dayTasks = appData.tasks[currentDay];
-            if (!dayTasks || dayTasks.length === 0) return;
+            if (!dayTasks) return;
 
             dayTasks.forEach(task => {
                 if (task.time && task.time !== '00:00') {
                     let [hours, mins] = task.time.split(':').map(Number);
                     let date = new Date();
                     date.setHours(hours, mins + minutesToShift);
-                    let newH = String(date.getHours()).padStart(2, '0');
-                    let newM = String(date.getMinutes()).padStart(2, '0');
-                    task.time = `${newH}:${newM}`;
+                    task.time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
                 }
             });
 
@@ -407,7 +460,7 @@
             if(!text) return;
 
             if(!appData.tasks[currentDay]) appData.tasks[currentDay] = [];
-            appData.tasks[currentDay].push({ id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4), time: time || '00:00', text: text, completed: false });
+            appData.tasks[currentDay].push({ id: 'task_' + Date.now(), time: time || '00:00', text: text, completed: false });
             appData.tasks[currentDay].sort((a, b) => (a.time > b.time ? 1 : -1));
             
             document.getElementById('taskInput').value = '';
@@ -554,7 +607,10 @@
 
         function renderNotes() {
             const grid = document.getElementById('notesGrid');
+            const sourceSelect = document.getElementById('quizSourceNote');
             grid.innerHTML = '';
+            sourceSelect.innerHTML = '<option value="">-- Kaynak Not Seç (Tüm Notlar İçin Boş Bırak) --</option>';
+
             appData.notes.forEach(note => {
                 const card = document.createElement('div');
                 card.className = 'card';
@@ -566,10 +622,197 @@
                     <button class="delete-btn" style="margin-top:10px;" onclick="deleteNote(${note.id})"><i class="fa-solid fa-trash"></i> Sil</button>
                 `;
                 grid.appendChild(card);
+
+                // AI Test için Not Seçeneği Ekle
+                const opt = document.createElement('option');
+                opt.value = note.id;
+                opt.innerText = note.title;
+                sourceSelect.appendChild(opt);
             });
         }
 
-        /* GROQ API INTEGRATION (STREAMING + QWEN / GPT-OSS) */
+        /* AI TEST OLUŞTURUCU */
+        let currentGeneratedQuiz = [];
+
+        async function generateAITest() {
+            const currentApiKey = appData.apiKey || document.getElementById('apiKeyInput').value.trim();
+            if(!currentApiKey) {
+                alert("Lütfen önce 'Groq AI Asistanı' sekmesinden API Key giriniz.");
+                return;
+            }
+
+            const noteId = document.getElementById('quizSourceNote').value;
+            const lang = document.getElementById('quizLang').value;
+            const count = document.getElementById('quizCount').value || 5;
+
+            let sourceText = "";
+            if(noteId) {
+                const selectedNote = appData.notes.find(n => n.id == noteId);
+                if(selectedNote) sourceText = `Başlık: ${selectedNote.title}\nİçerik: ${selectedNote.content}`;
+            } else {
+                sourceText = appData.notes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
+            }
+
+            if(!sourceText) {
+                alert("Test oluşturmak için önce en az bir ders notu eklemelisiniz.");
+                return;
+            }
+
+            const prompt = `Aşağıdaki ders notlarına dayanarak tam olarak ${count} adet çoktan seçmeli test sorusu hazırla.
+Dil: ${lang}
+Lütfen SADECE geçerli bir JSON array formatında yanıt ver, başka hiçbir açıklama metni ekleme. Format şu şekilde olmalı:
+[
+  {
+    "question": "Soru metni",
+    "options": ["A seçeneği", "B seçeneği", "C seçeneği", "D seçeneği"],
+    "answer": 0
+  }
+]
+(Not: 'answer' seçeneğin indeksidir: 0=A, 1=B, 2=C, 3=D)
+
+Not İçeriği:
+${sourceText}`;
+
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentApiKey}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: appData.selectedModel || 'qwen/qwen3.8-27b',
+                        messages: [{ role: 'user', content: prompt }]
+                    })
+                });
+
+                const data = await response.json();
+                let rawText = data.choices[0].message.content.trim();
+                // JSON ayrıştırma temizliği
+                if(rawText.includes('[')) {
+                    rawText = rawText.substring(rawText.indexOf('['), rawText.lastIndexOf(']') + 1);
+                }
+                currentGeneratedQuiz = JSON.parse(rawText);
+                renderQuiz();
+            } catch(e) {
+                alert("Test oluşturulurken bir hata meydana geldi: " + e.message);
+            }
+        }
+
+        function renderQuiz() {
+            const container = document.getElementById('quizContainer');
+            const qDiv = document.getElementById('quizQuestions');
+            qDiv.innerHTML = '';
+            document.getElementById('quizResultScore').innerText = '';
+
+            currentGeneratedQuiz.forEach((q, qIndex) => {
+                const card = document.createElement('div');
+                card.style.marginBottom = "20px";
+                card.innerHTML = `<h4>Soru ${qIndex + 1}: ${q.question}</h4>`;
+                
+                q.options.forEach((opt, optIndex) => {
+                    const btn = document.createElement('button');
+                    btn.className = `quiz-option opt_${qIndex}`;
+                    btn.innerText = opt;
+                    btn.onclick = () => selectQuizOption(qIndex, optIndex, btn);
+                    card.appendChild(btn);
+                });
+                qDiv.appendChild(card);
+            });
+            container.style.display = 'block';
+        }
+
+        let userAnswers = {};
+        function selectQuizOption(qIndex, optIndex, btnEl) {
+            userAnswers[qIndex] = optIndex;
+            document.querySelectorAll(`.opt_${qIndex}`).forEach(b => b.style.borderColor = "var(--border-color)");
+            btnEl.style.borderColor = "var(--primary)";
+            btnEl.style.fontWeight = "600";
+        }
+
+        function checkQuizResults() {
+            let score = 0;
+            currentGeneratedQuiz.forEach((q, qIndex) => {
+                const options = document.querySelectorAll(`.opt_${qIndex}`);
+                options.forEach((btn, optIndex) => {
+                    if(optIndex === q.answer) {
+                        btn.classList.add('correct');
+                    }
+                    if(userAnswers[qIndex] === optIndex && optIndex !== q.answer) {
+                        btn.classList.add('wrong');
+                    }
+                });
+                if(userAnswers[qIndex] === q.answer) score++;
+            });
+
+            const total = currentGeneratedQuiz.length;
+            const earnedCoins = score * 10;
+            appData.coins += earnedCoins;
+            saveData();
+            document.getElementById('quizResultScore').innerText = `Sonuç: ${total} soruda ${score} Doğru! (+${earnedCoins} Jeton Kazandın)`;
+        }
+
+        /* FLASHCARD & KART SÜRÜKLEME */
+        let activeCardsQueue = [];
+        let currentCardIndex = 0;
+
+        function addFlashcard() {
+            const front = document.getElementById('cardFront').value.trim();
+            const back = document.getElementById('cardBack').value.trim();
+            if(!front || !back) return;
+
+            appData.flashcards.push({ id: Date.now(), front, back });
+            document.getElementById('cardFront').value = '';
+            document.getElementById('cardBack').value = '';
+            saveData();
+            initFlashcards();
+        }
+
+        function initFlashcards() {
+            activeCardsQueue = [...appData.flashcards];
+            currentCardIndex = 0;
+            showCurrentCard();
+        }
+
+        function flipCard() {
+            document.getElementById('currentFlashcard').classList.toggle('flipped');
+        }
+
+        function showCurrentCard() {
+            const cardEl = document.getElementById('currentFlashcard');
+            cardEl.classList.remove('flipped');
+
+            if(activeCardsQueue.length === 0) {
+                document.getElementById('cardFrontText').innerText = "🎉 Tüm Kartlar Bitti!";
+                document.getElementById('cardBackText').innerText = "Tebrikler!";
+                document.getElementById('cardProgressText').innerText = "Kalan Kart: 0";
+                return;
+            }
+
+            document.getElementById('cardProgressText').innerText = `Kalan Kart: ${activeCardsQueue.length}`;
+            const card = activeCardsQueue[currentCardIndex];
+            document.getElementById('cardFrontText').innerText = card.front;
+            document.getElementById('cardBackText').innerText = card.back;
+        }
+
+        function swipeCard(known) {
+            if(activeCardsQueue.length === 0) return;
+
+            const currentCard = activeCardsQueue[currentCardIndex];
+            if(known) {
+                // Bildim -> Listeden çıkar
+                activeCardsQueue.splice(currentCardIndex, 1);
+                appData.coins += 2;
+                saveData();
+            } else {
+                // Bilemedim -> Sona at
+                activeCardsQueue.push(activeCardsQueue.splice(currentCardIndex, 1)[0]);
+            }
+
+            if(currentCardIndex >= activeCardsQueue.length) {
+                currentCardIndex = 0;
+            }
+            showCurrentCard();
+        }
+
+        /* GROQ API INTEGRATION */
         function saveApiKey() {
             const key = document.getElementById('apiKeyInput').value.trim();
             const model = document.getElementById('modelSelect').value;
@@ -587,62 +830,35 @@
             if(!query) return;
 
             const currentApiKey = appData.apiKey || document.getElementById('apiKeyInput').value.trim();
-            const currentModel = document.getElementById('modelSelect').value || 'qwen/qwen3.8-27b';
-
-            if(!currentApiKey) {
-                alert("Lütfen geçerli bir Groq API Key girin (gsk_...).");
-                return;
-            }
+            if(!currentApiKey) { alert("Lütfen geçerli bir Groq API Key girin."); return; }
 
             const chatBox = document.getElementById('chatBox');
-            
             const userMsg = document.createElement('div');
             userMsg.className = 'chat-msg user';
             userMsg.innerText = query;
             chatBox.appendChild(userMsg);
             input.value = '';
-            chatBox.scrollTop = chatBox.scrollHeight;
 
             const aiMsg = document.createElement('div');
             aiMsg.className = 'chat-msg ai';
-            aiMsg.innerText = '';
             chatBox.appendChild(aiMsg);
 
             let notesText = appData.notes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
-            let programText = JSON.stringify(appData.tasks);
-
-            const systemPrompt = `Sen Saint-Joseph Lisesi öğrencisinin kişisel ders asistanısın. Kullanıcıya Türkçe yanıt ver.
-Kullanıcının Ders Notları:
-${notesText || "Henüz not eklenmemiş."}
-
-Kullanıcının Haftalık Çalışma Programı:
-${programText}`;
 
             try {
-                // Groq API Endpoint
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${currentApiKey}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': `Bearer ${currentApiKey}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: currentModel,
+                        model: appData.selectedModel || 'qwen/qwen3.8-27b',
                         messages: [
-                            { role: 'system', content: systemPrompt },
+                            { role: 'system', content: `Sen öğrencimin kişisel asistanısın. Kullanıcı Notları:\n${notesText}` },
                             { role: 'user', content: query }
                         ],
                         stream: true
                     })
                 });
 
-                if (!response.ok) {
-                    const errData = await response.json();
-                    aiMsg.innerText = `Groq Hata: ${errData.error?.message || 'API anahtarınızı veya model seçimini kontrol edin.'}`;
-                    return;
-                }
-
-                // OpenAI formatında SSE Akışı Okuma
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
@@ -650,7 +866,6 @@ ${programText}`;
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
                     buffer = lines.pop();
@@ -663,26 +878,12 @@ ${programText}`;
                             try {
                                 const parsed = JSON.parse(dataStr);
                                 const content = parsed.choices?.[0]?.delta?.content;
-                                if (content) {
-                                    aiMsg.innerText += content;
-                                    chatBox.scrollTop = chatBox.scrollHeight;
-                                }
-                            } catch (e) {
-                                // Parçalama hatasını es geç
-                            }
+                                if (content) { aiMsg.innerText += content; chatBox.scrollTop = chatBox.scrollHeight; }
+                            } catch (e) {}
                         }
                     }
                 }
-
-                if (!aiMsg.innerText) {
-                    aiMsg.innerText = 'Yanıt alınamadı. Lütfen tekrar deneyiniz.';
-                }
-
-            } catch (err) {
-                aiMsg.innerText = 'Bağlantı hatası: ' + err.message;
-            }
-
-            chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) { aiMsg.innerText = 'Hata: ' + err.message; }
         }
 
         /* MAĞAZA */
@@ -726,19 +927,17 @@ ${programText}`;
 
         function updateUI() {
             document.getElementById('userCoins').innerText = appData.coins;
-            if(appData.apiKey) {
-                document.getElementById('apiKeyInput').value = appData.apiKey;
-            }
-            if(appData.selectedModel) {
-                document.getElementById('modelSelect').value = appData.selectedModel;
-            }
+            if(appData.apiKey) document.getElementById('apiKeyInput').value = appData.apiKey;
+            if(appData.selectedModel) document.getElementById('modelSelect').value = appData.selectedModel;
             renderTasks();
             renderLogs();
             renderNotes();
             renderShop();
         }
 
+        // Başlangıç Yüklemeleri
         updateUI();
+        initFlashcards();
     </script>
 </body>
 </html>
