@@ -222,7 +222,7 @@
             <div class="card">
                 <div class="form-group">
                     <select id="quizSourceNote" style="flex: 1.5;">
-                        <option value="">-- Kaynak Not Seç (Tüm Notlar İçin Boş Bırak) --</option>
+                        <option value="">-- Kaynak Not Seç (Tüm Notlar) --</option>
                     </select>
                     <select id="quizLang" style="flex: 1;">
                         <option value="Fransızca">Fransızca (Français)</option>
@@ -391,7 +391,7 @@
         let currentDay = 'Pazartesi';
         let tempFileData = null;
 
-        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v3')) || {
+        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v4')) || {
             coins: 0,
             completedDays: {},
             tasks: JSON.parse(JSON.stringify(pdfDefaultProgram)),
@@ -411,7 +411,7 @@
         };
 
         function saveData() {
-            localStorage.setItem('myStudyData_groq_v3', JSON.stringify(appData));
+            localStorage.setItem('myStudyData_groq_v4', JSON.stringify(appData));
             updateUI();
         }
 
@@ -668,17 +668,20 @@
                 return;
             }
 
-            const prompt = `Aşağıdaki ders notlarına dayanarak ${count} adet çoktan seçmeli test sorusu hazırla.
-Dil: ${lang}
-Lütfen SADECE geçerli bir JSON dizisi (array) döndür. Soru ve seçeneklerin metin içeriği eksiksiz ve açık olsun. Soru formatı tam olarak şöyle olmalıdır:
+            const prompt = `Aşağıdaki ders notlarına dayanarak tam olarak ${count} adet çoktan seçmeli soru oluştur.
+Test Dili: ${lang}
+
+ÇOK ÖNEMLİ KURAL:
+"options" dizisindeki her bir eleman GERÇEK VE ANLAMLI BİR SEÇENEK CÜMLESİ OLMALIDIR. Sakın sadece "a", "b", "c", "d" harflerini yazma! Şıkların içine dersle ilgili gerçek cevap ifadelerini yaz.
+
+SADECE geçerli bir JSON dizisi (JSON Array) döndür. Başka hiçbir açıklama yazma:
 [
   {
     "question": "Soru metni buraya",
-    "options": ["A seçeneği metni", "B seçeneği metni", "C seçeneği metni", "D seçeneği metni"],
+    "options": ["Gerçek seçenek 1 açıklaması", "Gerçek seçenek 2 açıklaması", "Gerçek seçenek 3 açıklaması", "Gerçek seçenek 4 açıklaması"],
     "answer": 0
   }
 ]
-(Not: 'answer' doğru olan seçeneğin dizideki indeksidir: 0, 1, 2 veya 3)
 
 Ders Notları:
 ${sourceText}`;
@@ -720,7 +723,14 @@ ${sourceText}`;
                 q.options.forEach((opt, optIndex) => {
                     const btn = document.createElement('button');
                     btn.className = `quiz-option opt_${qIndex}`;
-                    btn.innerText = `${labels[optIndex] || ''}${opt}`;
+                    
+                    // Şık metni boş veya sadece harften ibaretse düzelt
+                    let displayText = String(opt).trim();
+                    if(displayText.length <= 2 && ["a","b","c","d"].includes(displayText.toLowerCase())) {
+                        displayText = `Seçenek ${displayText.toUpperCase()}`;
+                    }
+
+                    btn.innerText = `${labels[optIndex] || ''}${displayText}`;
                     btn.onclick = () => selectQuizOption(qIndex, optIndex, btn);
                     card.appendChild(btn);
                 });
