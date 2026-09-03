@@ -105,9 +105,9 @@
         .card-back { background: var(--primary); color: white; transform: rotateY(180deg); }
         .card-controls { display: flex; gap: 20px; margin-top: 20px; }
         
-        .quiz-option { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s; }
+        .quiz-option { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s; font-size:0.95rem; }
         .quiz-option:hover { background: #eef2ff; border-color: var(--primary); }
-        .quiz-option.correct { background: #dcfce7 !important; border-color: var(--success) !important; color: #166534; }
+        .quiz-option.correct { background: #dcfce7 !important; border-color: var(--success) !important; color: #166534; font-weight:600; }
         .quiz-option.wrong { background: #fee2e2 !important; border-color: var(--danger) !important; color: #991b1b; }
     </style>
 </head>
@@ -135,7 +135,6 @@
             <div class="stat-card"><span>Tamamlanan Etkinlik</span><h2 id="statEtkinlik">0</h2></div>
         </div>
 
-        <!-- PROGRAM TAB -->
         <div id="programTab" class="tab-content active">
             <div class="header">
                 <h1>Sınav Odaklı Haftalık Çalışma Programı</h1>
@@ -180,7 +179,6 @@
             </div>
         </div>
 
-        <!-- TAKİP TAB -->
         <div id="takipTab" class="tab-content">
             <div class="header"><h1>Günlük Çalışma Takibi</h1></div>
             <div class="card">
@@ -198,7 +196,6 @@
             <div class="log-list" id="logList"></div>
         </div>
 
-        <!-- NOTLAR TAB -->
         <div id="notlarTab" class="tab-content">
             <div class="header"><h1>Ders Notları & PDF Belge Alanı</h1></div>
             <div class="card">
@@ -217,7 +214,6 @@
             <div id="notesGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:16px;"></div>
         </div>
 
-        <!-- AI TEST OLUŞTURUCU TAB -->
         <div id="aiTestTab" class="tab-content">
             <div class="header">
                 <h1>AI Otomatik Test Oluşturucu</h1>
@@ -232,7 +228,7 @@
                         <option value="Fransızca">Fransızca (Français)</option>
                         <option value="Türkçe">Türkçe</option>
                     </select>
-                    <input type="number" id="quizCount" placeholder="Soru Sayısı (Örn: 5)" value="5" min="1" max="10" style="flex: 0.8;">
+                    <input type="number" id="quizCount" placeholder="Soru Sayısı" value="5" min="1" max="10" style="flex: 0.8;">
                     <button class="btn" onclick="generateAITest()"><i class="fa-solid fa-wand-magic-sparkles"></i> Test Üret</button>
                 </div>
             </div>
@@ -243,18 +239,29 @@
             </div>
         </div>
 
-        <!-- FLASHCARD (KELİME KARTLARI) TAB -->
         <div id="flashcardTab" class="tab-content">
             <div class="header">
                 <h1>Arkalı Önlü Bilgi & Lexique Kartları</h1>
                 <p>Kartların üzerine tıklayarak çevir. Bildiklerini sağa/yeşile, bilemediklerini sola/kırmızıya sürükle!</p>
             </div>
+            
+            <div class="card" style="background: #eef2ff; border-color: #c7d2fe;">
+                <h3 style="color: var(--primary);"><i class="fa-solid fa-wand-magic-sparkles"></i> AI ile Notlardan Otomatik Kart Oluştur</h3>
+                <div class="form-group" style="margin-top:10px; margin-bottom:0;">
+                    <select id="cardSourceNote" style="flex: 1.5;">
+                        <option value="">-- Kaynak Not Seç (Tüm Notlar) --</option>
+                    </select>
+                    <input type="number" id="cardAICount" placeholder="Kart Sayısı" value="5" min="1" max="15" style="flex: 0.8;">
+                    <button class="btn" onclick="generateAIFlashcards()"><i class="fa-solid fa-bolt"></i> AI Kartları Üret</button>
+                </div>
+            </div>
+
             <div class="card">
-                <h3>Yeni Kart Ekle</h3>
-                <div class="form-group" style="margin-top:10px;">
+                <h3>Manuel Kart Ekle</h3>
+                <div class="form-group" style="margin-top:10px; margin-bottom:0;">
                     <input type="text" id="cardFront" placeholder="Ön Yüz (Örn: Le livre)" style="flex:1;">
                     <input type="text" id="cardBack" placeholder="Arka Yüz (Örn: Kitap)" style="flex:1;">
-                    <button class="btn" onclick="addFlashcard()"><i class="fa-solid fa-plus"></i> Kart Ekle</button>
+                    <button class="btn" onclick="addFlashcard()"><i class="fa-solid fa-plus"></i> Manuel Ekle</button>
                 </div>
             </div>
 
@@ -280,7 +287,6 @@
             </div>
         </div>
 
-        <!-- AI ASİSTAN TAB (GROQ API) -->
         <div id="aiTab" class="tab-content">
             <div class="header">
                 <h1>Groq AI Asistanı</h1>
@@ -310,7 +316,6 @@
             </div>
         </div>
 
-        <!-- MAĞAZA TAB -->
         <div id="magazaTab" class="tab-content">
             <div class="header"><h1>Jeton Ödül Mağazası</h1></div>
             <div class="card">
@@ -386,7 +391,7 @@
         let currentDay = 'Pazartesi';
         let tempFileData = null;
 
-        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v2')) || {
+        let appData = JSON.parse(localStorage.getItem('myStudyData_groq_v3')) || {
             coins: 0,
             completedDays: {},
             tasks: JSON.parse(JSON.stringify(pdfDefaultProgram)),
@@ -406,7 +411,7 @@
         };
 
         function saveData() {
-            localStorage.setItem('myStudyData_groq_v2', JSON.stringify(appData));
+            localStorage.setItem('myStudyData_groq_v3', JSON.stringify(appData));
             updateUI();
         }
 
@@ -608,8 +613,11 @@
         function renderNotes() {
             const grid = document.getElementById('notesGrid');
             const sourceSelect = document.getElementById('quizSourceNote');
+            const cardSourceSelect = document.getElementById('cardSourceNote');
+
             grid.innerHTML = '';
-            sourceSelect.innerHTML = '<option value="">-- Kaynak Not Seç (Tüm Notlar İçin Boş Bırak) --</option>';
+            sourceSelect.innerHTML = '<option value="">-- Kaynak Not Seç (Tüm Notlar) --</option>';
+            cardSourceSelect.innerHTML = '<option value="">-- Kaynak Not Seç (Tüm Notlar) --</option>';
 
             appData.notes.forEach(note => {
                 const card = document.createElement('div');
@@ -623,11 +631,13 @@
                 `;
                 grid.appendChild(card);
 
-                // AI Test için Not Seçeneği Ekle
-                const opt = document.createElement('option');
-                opt.value = note.id;
-                opt.innerText = note.title;
-                sourceSelect.appendChild(opt);
+                const opt1 = document.createElement('option');
+                opt1.value = note.id; opt1.innerText = note.title;
+                sourceSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = note.id; opt2.innerText = note.title;
+                cardSourceSelect.appendChild(opt2);
             });
         }
 
@@ -658,19 +668,19 @@
                 return;
             }
 
-            const prompt = `Aşağıdaki ders notlarına dayanarak tam olarak ${count} adet çoktan seçmeli test sorusu hazırla.
+            const prompt = `Aşağıdaki ders notlarına dayanarak ${count} adet çoktan seçmeli test sorusu hazırla.
 Dil: ${lang}
-Lütfen SADECE geçerli bir JSON array formatında yanıt ver, başka hiçbir açıklama metni ekleme. Format şu şekilde olmalı:
+Lütfen SADECE geçerli bir JSON dizisi (array) döndür. Soru ve seçeneklerin metin içeriği eksiksiz ve açık olsun. Soru formatı tam olarak şöyle olmalıdır:
 [
   {
-    "question": "Soru metni",
-    "options": ["A seçeneği", "B seçeneği", "C seçeneği", "D seçeneği"],
+    "question": "Soru metni buraya",
+    "options": ["A seçeneği metni", "B seçeneği metni", "C seçeneği metni", "D seçeneği metni"],
     "answer": 0
   }
 ]
-(Not: 'answer' seçeneğin indeksidir: 0=A, 1=B, 2=C, 3=D)
+(Not: 'answer' doğru olan seçeneğin dizideki indeksidir: 0, 1, 2 veya 3)
 
-Not İçeriği:
+Ders Notları:
 ${sourceText}`;
 
             try {
@@ -685,7 +695,6 @@ ${sourceText}`;
 
                 const data = await response.json();
                 let rawText = data.choices[0].message.content.trim();
-                // JSON ayrıştırma temizliği
                 if(rawText.includes('[')) {
                     rawText = rawText.substring(rawText.indexOf('['), rawText.lastIndexOf(']') + 1);
                 }
@@ -707,10 +716,11 @@ ${sourceText}`;
                 card.style.marginBottom = "20px";
                 card.innerHTML = `<h4>Soru ${qIndex + 1}: ${q.question}</h4>`;
                 
+                const labels = ["A) ", "B) ", "C) ", "D) "];
                 q.options.forEach((opt, optIndex) => {
                     const btn = document.createElement('button');
                     btn.className = `quiz-option opt_${qIndex}`;
-                    btn.innerText = opt;
+                    btn.innerText = `${labels[optIndex] || ''}${opt}`;
                     btn.onclick = () => selectQuizOption(qIndex, optIndex, btn);
                     card.appendChild(btn);
                 });
@@ -749,9 +759,73 @@ ${sourceText}`;
             document.getElementById('quizResultScore').innerText = `Sonuç: ${total} soruda ${score} Doğru! (+${earnedCoins} Jeton Kazandın)`;
         }
 
-        /* FLASHCARD & KART SÜRÜKLEME */
+        /* FLASHCARD & AI KART ÜRETİCİ */
         let activeCardsQueue = [];
         let currentCardIndex = 0;
+
+        async function generateAIFlashcards() {
+            const currentApiKey = appData.apiKey || document.getElementById('apiKeyInput').value.trim();
+            if(!currentApiKey) {
+                alert("Lütfen önce 'Groq AI Asistanı' sekmesinden API Key giriniz.");
+                return;
+            }
+
+            const noteId = document.getElementById('cardSourceNote').value;
+            const count = document.getElementById('cardAICount').value || 5;
+
+            let sourceText = "";
+            if(noteId) {
+                const selectedNote = appData.notes.find(n => n.id == noteId);
+                if(selectedNote) sourceText = `Başlık: ${selectedNote.title}\nİçerik: ${selectedNote.content}`;
+            } else {
+                sourceText = appData.notes.map(n => `Başlık: ${n.title}\nİçerik: ${n.content}`).join('\n---\n');
+            }
+
+            if(!sourceText) {
+                alert("Kart oluşturmak için önce en az bir ders notu eklemelisiniz.");
+                return;
+            }
+
+            const prompt = `Aşağıdaki ders notlarından en önemli ${count} terimi/kavramı/kelimeyi çıkarıp bilgi kartına dönüştür.
+Ön yüz (front): Fransızca kelime/terim veya soru.
+Arka yüz (back): Türkçe karşılığı veya kısa açıklaması.
+
+Lütfen SADECE şu JSON dizisini döndür, ek metin yazma:
+[
+  { "front": "Le livre", "back": "Kitap" }
+]
+
+Notlar:
+${sourceText}`;
+
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentApiKey}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: appData.selectedModel || 'qwen/qwen3.8-27b',
+                        messages: [{ role: 'user', content: prompt }]
+                    })
+                });
+
+                const data = await response.json();
+                let rawText = data.choices[0].message.content.trim();
+                if(rawText.includes('[')) {
+                    rawText = rawText.substring(rawText.indexOf('['), rawText.lastIndexOf(']') + 1);
+                }
+                const newCards = JSON.parse(rawText);
+                
+                newCards.forEach(c => {
+                    appData.flashcards.push({ id: Date.now() + Math.random(), front: c.front, back: c.back });
+                });
+
+                saveData();
+                initFlashcards();
+                alert(`${newCards.length} yeni AI bilgi kartı eklendi!`);
+            } catch(e) {
+                alert("Kart üretilirken bir hata oluştu: " + e.message);
+            }
+        }
 
         function addFlashcard() {
             const front = document.getElementById('cardFront').value.trim();
@@ -795,14 +869,11 @@ ${sourceText}`;
         function swipeCard(known) {
             if(activeCardsQueue.length === 0) return;
 
-            const currentCard = activeCardsQueue[currentCardIndex];
             if(known) {
-                // Bildim -> Listeden çıkar
                 activeCardsQueue.splice(currentCardIndex, 1);
                 appData.coins += 2;
                 saveData();
             } else {
-                // Bilemedim -> Sona at
                 activeCardsQueue.push(activeCardsQueue.splice(currentCardIndex, 1)[0]);
             }
 
@@ -935,7 +1006,6 @@ ${sourceText}`;
             renderShop();
         }
 
-        // Başlangıç Yüklemeleri
         updateUI();
         initFlashcards();
     </script>
